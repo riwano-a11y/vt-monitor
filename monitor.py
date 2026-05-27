@@ -79,12 +79,12 @@ def check_http_published(domain_str):
     for url in urls:
         try:
             r = requests.get(url, headers=headers, timeout=5, allow_redirects=True)
-            if r.status_code in [401, 403]: return False
+            if r.status_code in [401, 403]: return False, "", ""
             if r.status_code < 500:
                 soup = BeautifulSoup(r.text, "html.parser")
                 page_text = r.text.strip().lower()
                 if page_text == "web php" or "index of /" in page_text or page_text == "apache" or not page_text:
-                    return False
+                    return False, "", ""
                 title = ""
                 if soup.title: title = soup.title.text.strip()
                 return True, title, url
@@ -124,6 +124,7 @@ def main():
             if domain in new_state and new_state[domain].get("status") == "published":
                 continue
                 
+            # 🎯 バグ修正箇所：どんな状態でも必ず3つのデータが返るように修正しました
             active, title, target_url = check_http_published(domain)
             sources = []
             if src_info["crt"]: sources.append("crt.sh")
@@ -133,7 +134,6 @@ def main():
             # 初めてドメインを発見したとき
             if domain not in new_state:
                 if active:
-                    # 🚀 パターン1：完全新規でいきなりHP公開状態
                     new_state[domain] = {"status": "published"}
                     msg = (
                         f"🚀 **IPアドレス {ip} から新しいHPが公開されました！**{source_text}\n"
@@ -144,29 +144,7 @@ def main():
                     )
                     send_slack_notification(msg)
                 else:
-                    # 🟡 パターン2：HPはないが、ドメイン候補だけ検知
                     new_state[domain] = {"status": "candidate"}
                     msg = (
                         f"🟡 **IPアドレス {ip} から候補が検知されました！**{source_text}\n"
                         f"🌐 **DOMAIN**: {domain}\n"
-                        f" STATUS: NO WEBSITE（まだサイトは開いていません）\n"
-                        f"----------------------------------------"
-                    )
-                    send_slack_notification(msg)
-                    
-            # 🟢 すでに「候補」だったものが、今回「公開状態」に進化（昇格）したとき
-            elif new_state[domain].get("status") == "candidate" and active:
-                new_state[domain] = {"status": "published"}
-                msg = (
-                    f"🚀 **IPアドレス {ip} から候補だったHPが公開されました！**{source_text}\n"
-                    f"🌐 **DOMAIN**: {domain}\n"
-                    f"📝 **TITLE**: {title}\n"
-                    f"🔗 **URL**: {target_url}\n"
-                    f"----------------------------------------"
-                )
-                send_slack_notification(msg)
-                
-    save_state(new_state)
-
-if __name__ == "__main__":
-    main()
