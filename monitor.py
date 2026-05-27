@@ -124,7 +124,6 @@ def main():
             if domain in new_state and new_state[domain].get("status") == "published":
                 continue
                 
-            # 🎯 バグ修正箇所：どんな状態でも必ず3つのデータが返るように修正しました
             active, title, target_url = check_http_published(domain)
             sources = []
             if src_info["crt"]: sources.append("crt.sh")
@@ -148,3 +147,24 @@ def main():
                     msg = (
                         f"🟡 **IPアドレス {ip} から候補が検知されました！**{source_text}\n"
                         f"🌐 **DOMAIN**: {domain}\n"
+                        f"📋 **STATUS**: NO WEBSITE（まだサイトは開いていません）\n"
+                        f"----------------------------------------"
+                    )
+                    send_slack_notification(msg)
+                    
+            # すでに「候補」だったものが「公開状態」に進化（昇格）したとき
+            elif new_state[domain].get("status") == "candidate" and active:
+                new_state[domain] = {"status": "published"}
+                msg = (
+                    f"🚀 **IPアドレス {ip} から候補だったHPが公開されました！**{source_text}\n"
+                    f"🌐 **DOMAIN**: {domain}\n"
+                    f"📝 **TITLE**: {title}\n"
+                    f"🔗 **URL**: {target_url}\n"
+                    f"----------------------------------------"
+                )
+                send_slack_notification(msg)
+                
+    save_state(new_state)
+
+if __name__ == "__main__":
+    main()
