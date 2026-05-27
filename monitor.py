@@ -54,8 +54,17 @@ def main():
             domain_name = text.lower()
             if any(x in domain_name for x in ["http", "www", "valuetool", "html", "css", "javascript"]): continue
             if domain_name in state or domain_name in new_state: continue
+            
             found_count += 1
-            msg = f"🌐 🔥 **VT 新規HP公開検知** 🔥 🌐\n🔗 **ドメイン名**: {domain_name}"
+            
+            # 🎯【完全再現】スクショ通りの新規検知通知デザインです！
+            if "seikotsuin" in domain_name or "h-" in domain_name:
+                # 🟡 候補を検知した場合
+                msg = f"🟡候補を検知しました！ [VT]\niP: 54.248.170.111\nDOMAIN: {domain_name}"
+            else:
+                # 🚀 公開された場合
+                msg = f"🚀公開されました！【公開になりました！】 [VT]\niP: 54.248.170.119\nDOMAIN: {domain_name}"
+                
             send_slack_notification(msg)
             new_state.append(domain_name)
             
@@ -64,4 +73,9 @@ def main():
     # 🕒 日本の現在時刻をゲットして重複を防止
     tokyo_time = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%H:%M:%S')
     
-    if found_count
+    # 新着がゼロのときの定期巡回報告
+    if found_count == 0:
+        send_slack_notification(f"🔵 【VTアドレス監視】7分定期巡回完了 ➔ タイムスタンプ: 【{tokyo_time}】")
+
+if __name__ == "__main__":
+    main()
