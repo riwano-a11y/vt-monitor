@@ -10,13 +10,19 @@ STATE_FILE = "monitor_state.json"
 
 def load_state():
     if os.path.exists(STATE_FILE):
-        try: with open(STATE_FILE, "r") as f: return json.load(f)
-        except: return []
+        try:
+            with open(STATE_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return []
     return []
 
 def save_state(state):
-    try: with open(STATE_FILE, "w") as f: json.dump(state, f, indent=4)
-    except: pass
+    try:
+        with open(STATE_FILE, "w") as f:
+            json.dump(state, f, indent=4)
+    except:
+        pass
 
 def send_slack_notification(message):
     if not WEBHOOK: return
@@ -55,12 +61,7 @@ def main():
             
     save_state(new_state)
     
-    # 🕒 日本の現在時刻をゲット（これで重複を絶対に防ぎます）
+    # 🕒 日本の現在時刻をゲットして重複を防止
     tokyo_time = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%H:%M:%S')
     
-    if found_count == 0:
-        # 🎯【ここをVT専用に修正！】絶対に大吉と被らないメッセージにします
-        send_slack_notification(f"🔵 【VTアドレス監視】7分定期巡回完了 ➔ タイムスタンプ: 【{tokyo_time}】")
-
-if __name__ == "__main__":
-    main()
+    if found_count
