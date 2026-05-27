@@ -31,6 +31,9 @@ def send_slack_notification(message):
     except: pass
 
 def main():
+    # 🕒 先に日本時間を計算（サイトが空っぽでも絶対に通知を飛ばすため）
+    tokyo_time = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%H:%M:%S')
+    
     url = "https://domain-search.valuetool.io/"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -38,20 +41,24 @@ def main():
         "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
         "Referer": "https://www.google.com/"
     }
+    
     try:
         r = requests.get(url, headers=headers, timeout=15)
-        if r.status_code != 200: return
-    except: return
+        if r.status_code != 200:
+            # サイトが落ちていても、エラーにせずSlackに報告する
+            send_slack_notification(f"🔵 【VTアドレス監視】7分定期巡回完了 ➔ タイムスタンプ: 【{tokyo_time}】(※現在サイトメンテナンス中)")
+            return
+    except:
+        send_slack_notification(f"🔵 【VTアドレス監視】7分定期巡回完了 ➔ タイムスタンプ: 【{tokyo_time}】(※通信一時混雑)")
+        return
 
     soup = BeautifulSoup(r.text, "html.parser")
     state = load_state()
     new_state = state.copy()
-
-# 🛠️【テスト用追加】「test-dummy-domain.io」という架空のドメインを強制的に検知させる
-    soup.append(soup.new_tag("div"))
-    soup.find_all("div")[-1].string = "test-dummy-domain.io"
     
     found_count = 0
+    
+    # サイトにドメインが載っているかチェック
     for tag in soup.find_all(["a", "td", "span", "div"]):
         text = tag.text.strip()
         if "." in text and " " not in text and len(text) > 4:
@@ -61,12 +68,10 @@ def main():
             
             found_count += 1
             
-            # 🎯【完全再現】スクショ通りの新規検知通知デザインです！
+            # ✨スクショ通りの新規検知通知デザイン
             if "seikotsuin" in domain_name or "h-" in domain_name:
-                # 🟡 候補を検知した場合
                 msg = f"🟡候補を検知しました！ [VT]\niP: 54.248.170.111\nDOMAIN: {domain_name}"
             else:
-                # 🚀 公開された場合
                 msg = f"🚀公開されました！【公開になりました！】 [VT]\niP: 54.248.170.119\nDOMAIN: {domain_name}"
                 
             send_slack_notification(msg)
@@ -74,12 +79,8 @@ def main():
             
     save_state(new_state)
     
-    # 🕒 日本の現在時刻をゲットして重複を防止
-    tokyo_time = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%H:%M:%S')
-    
-    # 新着がゼロのときの定期巡回報告
-    if found_count == 0:
-        send_slack_notification(f"🔵 【VTアドレス監視】7分定期巡回完了 ➔ タイムスタンプ: 【{tokyo_time}】")
+    # 🎯 サイトが何件であろうが、真っ白だろうが、絶対にこの終了通知を強制送信する！
+    send_slack_notification(f"🔵 【VTアドレス監視】7分定期巡回完了 ➔ タイムスタンプ: 【{tokyo_time}】")
 
 if __name__ == "__main__":
     main()
