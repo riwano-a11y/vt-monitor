@@ -46,6 +46,10 @@ def main():
     soup = BeautifulSoup(r.text, "html.parser")
     state = load_state()
     new_state = state.copy()
+
+# 🛠️【テスト用追加】「test-dummy-domain.io」という架空のドメインを強制的に検知させる
+    soup.append(soup.new_tag("div"))
+    soup.find_all("div")[-1].string = "test-dummy-domain.io"
     
     found_count = 0
     for tag in soup.find_all(["a", "td", "span", "div"]):
