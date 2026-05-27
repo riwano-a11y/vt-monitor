@@ -1,21 +1,20 @@
 import os
 import requests
 import json
-import time
+from datetime import datetime
+import pytz
 
 WEBHOOK = os.environ.get("SLACK_WEBHOOK")
 STATE_FILE = "monitor_state.json"
 
 def load_state():
     if os.path.exists(STATE_FILE):
-        try:
-            with open(STATE_FILE, "r") as f: return json.load(f)
+        try: with open(STATE_FILE, "r") as f: return json.load(f)
         except: return []
     return []
 
 def save_state(state):
-    try:
-        with open(STATE_FILE, "w") as f: json.dump(state, f, indent=4)
+    try: with open(STATE_FILE, "w") as f: json.dump(state, f, indent=4)
     except: pass
 
 def send_slack_notification(message):
@@ -24,7 +23,7 @@ def send_slack_notification(message):
     try: requests.post(WEBHOOK, json=payload, timeout=10)
     except: pass
 
-def check_vt():
+def main():
     url = "https://domain-search.valuetool.io/api/v1/domains/search"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Monitor/1.0", "Accept": "application/json"}
     try:
@@ -47,15 +46,12 @@ def check_vt():
         new_state.append(domain_name)
         
     save_state(new_state)
+    
+    # 🕒 日本の現在時刻をゲット
+    tokyo_time = datetime.now(pytz.timezone('Asia/Tokyo')).strftime('%H:%M:%S')
+    
     if found_count == 0:
-        send_slack_notification("🟢 【VTアドレス監視】定期巡回完了。新着HP公開は0件でした（システム正常稼働中）")
-
-def main():
-    start_time = time.time()
-    while time.time() - start_time < 21000:
-        check_vt()
-        print("5分間スリープします...")
-        time.sleep(300)
+        send_slack_notification(f"🟢 【VTアドレス監視】定期巡回完了（正常稼働中） ➔ タイムスタンプ: 【{tokyo_time}】")
 
 if __name__ == "__main__":
     main()
